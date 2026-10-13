@@ -1,0 +1,4 @@
+audit/
+__pycache__/
+*.tmp
+.DS_Store
