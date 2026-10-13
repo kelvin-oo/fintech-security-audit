@@ -21,7 +21,7 @@ Read these before starting:
 - `references/safety.md`: the rules that apply to every step. Non-negotiable.
 - `references/scoring.md`: severity, deductions, grades and the launch gate.
 - `references/modules-and-domains.md`: default modules, control domains and weights.
-- `references/checklists.md`: what to look for, per area, in fintech code.
+- `references/checklists.md`: what to look for, per area, in fintech code, plus notes per language and framework (PHP and Laravel, Node, Python, Java, Go, Rails). Read the notes for every stack in the product.
 - `references/writing-findings.md`: how a finding is worded.
 
 ## Step 0. Authorisation and scope
@@ -33,8 +33,17 @@ Before reading any code, ask the user, in one message:
 3. Depth: **Quick** (top risks only), **Standard** (full Before reports) or **Deep** (Standard plus tool scans and a retest).
 4. Platforms in scope (for example API, web app, mobile app, admin back office, partner portals, public site).
 5. Product name to print on the reports.
+6. May the scan send package lists (names and versions, never code) to public vulnerability databases such as npm, Packagist, PyPI or the Go database? The default is **no**: everything stays on this machine and dependency files are reviewed by hand instead.
 
 Do not continue without a clear yes to question 1. Record the answers with `findings.py init` (see below).
+
+Then make sure the results can never be committed. If the project is a git repository and `audit/` is not ignored, ask to add it to the repository's local ignore list, which is never committed and leaves the client's `.gitignore` untouched:
+
+```bash
+echo '/audit/' >> .git/info/exclude
+```
+
+`findings.py init` and `scan.sh` both refuse to write inside a repository where `audit/` is not ignored.
 
 ## Step 1. Map the product
 
@@ -75,10 +84,18 @@ Subagents and first passes over-rate. Before any report is written:
 ## Step 4. Tool evidence (Standard optional, Deep required)
 
 ```bash
-bash scripts/scan.sh /path/to/repo [https://staging.example.com ...]
+bash scripts/scan.sh /path/to/repo                       # offline (default)
+bash scripts/scan.sh --online /path/to/repo              # only if the user said yes to question 6
+bash scripts/scan.sh --semgrep-rules ./rules /path/to/repo https://staging.example.com
 ```
 
-It runs what is installed: dependency audit (npm, pnpm, yarn, pip), secret scanning of the working tree and git history (gitleaks if present, otherwise a pattern scan that prints masked hits only), semgrep if present, and security header checks against the staging URLs given. Output goes to `audit/evidence/`. Turn real hits into findings; ignore noise. Never run it against production URLs.
+It runs what is installed and never installs anything:
+- **Dependencies:** finds lock files for JavaScript (npm, pnpm, yarn), PHP (composer), Python (pip, poetry), Go, Ruby, Rust, Java (Maven, Gradle) and .NET, and writes a package inventory for each to `audit/evidence/`. Offline, read the inventories and flag packages whose versions you know to have serious advisories (framework versions especially), saying they need confirming online. With `--online`, the ecosystem's own checker runs when installed (`npm audit`, `composer audit`, `pip-audit`, `govulncheck`, `bundle-audit`, `cargo audit`, `dotnet list package --vulnerable`).
+- **Secrets:** working tree and git history (gitleaks if present, otherwise a pattern scan that prints the location and a masked prefix only), plus committed `.env` files.
+- **Static analysis:** semgrep with local rules (`--semgrep-rules`, metrics off), or its downloaded rules only with `--online`.
+- **Headers:** only the staging or local URLs passed in.
+
+Turn real hits into findings; ignore noise. Never run it against production URLs.
 
 ## Step 5. Security review extras
 

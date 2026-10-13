@@ -122,3 +122,53 @@ What to look for, by module. These are prompts for reading code, not a script to
 - Infra: databases and caches not reachable from the internet, backups with point-in-time restore, least-privilege database users.
 - Monitoring: alerts for failed payouts, low provider balances, repeated failed sign-ins, admin actions; a second alert channel.
 - Dependencies: known vulnerable packages, unpinned versions, install scripts.
+
+## Language and framework notes
+
+Read the section for each stack in the product, alongside the module checklists above.
+
+### PHP and Laravel
+
+- Mass assignment: models with `$guarded = []` or wide `$fillable` that include `balance`, `status`, `role`, `is_admin`, `user_id`; `Model::create($request->all())` or `->update($request->all())`.
+- Raw SQL: `DB::raw`, `DB::select`, `whereRaw`, `orderByRaw` built with request input.
+- Money: amounts held in floats (`(float)`, `round()`) instead of integer minor units or `bcmath`/`brick/money`; balance updates outside `DB::transaction` or without `lockForUpdate()`.
+- Access: routes missing `auth` or `can:` middleware; policies not called (`$this->authorize`) on show, update and delete; route model binding that loads any record by ID without an owner scope.
+- CSRF: routes listed in `VerifyCsrfToken::$except` beyond real webhooks.
+- Config: `APP_DEBUG=true` or `APP_ENV=local` outside development (stack traces and env values leak); `.env` reachable from the web root; `APP_KEY` committed; `storage/` or `vendor/` served publicly; `phpinfo()` left in.
+- Sessions and cookies: `SESSION_SECURE_COOKIE`, `http_only`, `same_site` settings.
+- Files: uploads stored under `public/` with their original name or extension; `Storage::url` on private files.
+- Unsafe functions on user input: `unserialize`, `eval`, `extract`, `include` with a variable path, `shell_exec`, `exec`, `system`.
+- Webhooks: signature checked with `==` instead of `hash_equals`.
+- Plain PHP (no framework): `mysqli_query` or PDO with string-built SQL, `$_GET`/`$_POST` echoed without `htmlspecialchars`, `md5`/`sha1` for passwords instead of `password_hash`.
+
+### Node.js and TypeScript
+
+- Balance updates without a transaction and row lock; ORM `update` that reads then writes.
+- `parseFloat` or plain numbers for money instead of a decimal type.
+- `===` on signatures instead of `crypto.timingSafeEqual`; `Math.random` for codes.
+- `X-Forwarded-For` read directly; `trust proxy` not matching the real number of proxies.
+- Tokens in `localStorage`; `dangerouslySetInnerHTML` with user content.
+
+### Python and Django or FastAPI
+
+- `float` for money instead of `Decimal`; `select_for_update()` missing on balance rows.
+- `extra()`, `raw()` or f-string SQL; `pickle` or `yaml.load` on input; `DEBUG = True`; `ALLOWED_HOSTS = ['*']`.
+- Views missing permission classes or object-level checks; `csrf_exempt` beyond webhooks.
+
+### Java and Spring
+
+- `double` for money instead of `BigDecimal`; `@Transactional` missing or on private methods (ignored).
+- Endpoints missing `@PreAuthorize`; actuator endpoints exposed; string-built JPQL or SQL.
+- Deserialisation of untrusted input (Jackson default typing, Java serialisation).
+
+### Go
+
+- `float64` for money; balance updates outside a transaction or without `SELECT ... FOR UPDATE`.
+- `fmt.Sprintf` SQL; `==` on HMACs instead of `hmac.Equal`; `math/rand` for codes.
+- Handlers that skip the auth middleware; errors returned to clients with internal detail.
+
+### Ruby on Rails
+
+- `permit!` or wide strong parameters; `find` without scoping to `current_user`.
+- `where("... #{params[...]}")`; `html_safe` or `raw` on user content; `protect_from_forgery` skipped.
+- `Float` for money instead of `BigDecimal`; `with_lock` missing on balance updates.

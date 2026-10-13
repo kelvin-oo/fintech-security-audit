@@ -220,9 +220,29 @@ def severity_counts(db: dict, phase: str, only_counted=False, key=None) -> dict:
 
 # ── Commands ──
 
+def git_exposed(path: Path):
+    """The repo root when `path` sits in a git repo and is not ignored, else None.
+    Findings describe weaknesses, so they must never be committed by accident."""
+    probe = path.resolve().parent
+    while not probe.exists():
+        probe = probe.parent
+    top = subprocess.run(["git", "-C", str(probe), "rev-parse", "--show-toplevel"], capture_output=True, text=True)
+    if top.returncode != 0:
+        return None
+    root = top.stdout.strip()
+    ignored = subprocess.run(["git", "-C", root, "check-ignore", "-q", str(path.resolve())], capture_output=True)
+    return None if ignored.returncode == 0 else root
+
+
 def cmd_init(a, path: Path):
     if path.exists() and not a.force:
         sys.exit(f"{path} already exists. Use --force to start over.")
+    root = shutil.which("git") and git_exposed(path)
+    if root and not a.allow_tracked:
+        sys.exit(f"{path} is inside the git repository at {root} and is not ignored.\n"
+                 f"Findings describe weaknesses and must not be committed. Ignore the folder locally (never committed):\n"
+                 f"  echo '/{os.path.relpath(path.resolve().parent, root)}/' >> \"{root}/.git/info/exclude\"\n"
+                 f"or add it to .gitignore, then run init again.")
     mods = {}
     for mid in [m.strip().upper() for m in a.modules.split(",") if m.strip()]:
         if mid in DEFAULT_MODULES:
@@ -740,6 +760,7 @@ def main():
     p.add_argument("--platforms", default="TBC"); p.add_argument("--depth", choices=["quick", "standard", "deep"], default="standard")
     p.add_argument("--modules", default=",".join(DEFAULT_MODULES)); p.add_argument("--custom-module", action="append")
     p.add_argument("--prepared-by", default=""); p.add_argument("--force", action="store_true")
+    p.add_argument("--allow-tracked", action="store_true", help="skip the git-ignore check (not recommended)")
     p = sp.add_parser("meta"); p.add_argument("--file", required=True)
     p = sp.add_parser("add"); p.add_argument("--file", required=True)
     p = sp.add_parser("edit"); p.add_argument("id"); p.add_argument("--file", required=True)

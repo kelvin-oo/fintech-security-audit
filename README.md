@@ -66,7 +66,7 @@ git clone https://github.com/kelvin-oo/fintech-security-audit.git .claude/skills
 
 Restart Claude Code. To update later, run `git pull` inside that folder.
 
-Optional scanners it uses when they are installed: `gitleaks`, `semgrep`, `pip-audit`. It never installs anything itself.
+It works on JavaScript, TypeScript, PHP, Python, Go, Ruby, Java, Rust and .NET codebases. Optional tools it uses when they are installed: `gitleaks`, `semgrep`, and each language's own package checker (`npm audit`, `composer audit`, `pip-audit`, `govulncheck`, `bundle-audit`, `cargo audit`, `dotnet`). It never installs anything itself.
 
 ## How to use it
 
@@ -74,7 +74,7 @@ Open Claude Code in the root of the project you want audited, and either type `/
 
 > Run a fintech security audit on this codebase.
 
-Everything it produces goes in an `audit/` folder in your project: the findings list (`audit/findings.json`), tool output (`audit/evidence/`) and the reports (`audit/reports/`). These can hold sensitive detail about your weaknesses, so keep `audit/` out of public repositories (add it to `.gitignore`).
+Everything it produces goes in an `audit/` folder in your project: the findings list (`audit/findings.json`), tool output (`audit/evidence/`) and the reports (`audit/reports/`). These hold sensitive detail about your weaknesses, so before writing anything it makes sure git ignores `audit/`, offering to add it to the repository's local ignore list (`.git/info/exclude`), which is never committed and leaves your `.gitignore` alone.
 
 It will ask you to confirm you own the code or are allowed to test it. Then it asks how deep to go:
 
@@ -87,6 +87,8 @@ When you have fixed some findings, ask it to retest. It only rechecks what you c
 ## Ground rules it follows
 
 - It never runs anything against production. It reads code and tests on staging or local copies.
+- Nothing leaves your machine unless you say so. Checking packages against public vulnerability databases is off until you allow it.
+- It won't write its results anywhere git could commit them.
 - It hides keys, passwords and personal data in everything it writes.
 - It describes each problem, why it matters and how to fix it. It never writes step-by-step attack instructions.
 - It checks every Critical and High finding by hand before reporting it. AI reviewers over-rate things, and a false alarm wastes a team's day.
