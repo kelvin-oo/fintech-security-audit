@@ -48,11 +48,33 @@ Each finding gets a severity from Critical to Informational, using CVSS with one
 
 To pass, there must be no open Critical or High findings. Fixed items count fully. Items you've decided to live with count partly, and the report says so.
 
+## Install
+
+You need [Claude Code](https://claude.com/claude-code), Python 3.9 or newer, and git. Pandoc is optional (for Word copies of the reports).
+
+**For all your projects** (recommended):
+
+```bash
+git clone https://github.com/kelvin-oo/fintech-security-audit.git ~/.claude/skills/fintech-security-audit
+```
+
+**For one project only**, from that project's root:
+
+```bash
+git clone https://github.com/kelvin-oo/fintech-security-audit.git .claude/skills/fintech-security-audit
+```
+
+Restart Claude Code. To update later, run `git pull` inside that folder.
+
+Optional scanners it uses when they are installed: `gitleaks`, `semgrep`, `pip-audit`. It never installs anything itself.
+
 ## How to use it
 
-Install it as a Claude skill, open your project, and ask:
+Open Claude Code in the root of the project you want audited, and either type `/fintech-security-audit` or just ask:
 
 > Run a fintech security audit on this codebase.
+
+Everything it produces goes in an `audit/` folder in your project: the findings list (`audit/findings.json`), tool output (`audit/evidence/`) and the reports (`audit/reports/`). These can hold sensitive detail about your weaknesses, so keep `audit/` out of public repositories (add it to `.gitignore`).
 
 It will ask you to confirm you own the code or are allowed to test it. Then it asks how deep to go:
 

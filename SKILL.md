@@ -15,6 +15,8 @@ You are running a structured security audit of a fintech product. The work produ
 
 Every finding is stored once in `audit/findings.json` and carries both a module (bug bounty view) and a control domain (security view). Reports are generated from it with `scripts/findings.py`. Never hand-edit a generated report: change the database and render again.
 
+**Paths:** `scripts/` and `references/` are in this skill's own folder (the folder holding this SKILL.md), not in the user's project. Call scripts by their full path, for example `python3 ~/.claude/skills/fintech-security-audit/scripts/findings.py`, and run them from the root of the project being audited so `audit/` is created there. In the examples below, `scripts/` is short for that full path. Check that `audit/` is git-ignored in the audited project and suggest adding it if not.
+
 Read these before starting:
 - `references/safety.md`: the rules that apply to every step. Non-negotiable.
 - `references/scoring.md`: severity, deductions, grades and the launch gate.
